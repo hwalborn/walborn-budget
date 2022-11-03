@@ -1,0 +1,31 @@
+<p>
+    Wow much exciting. I take a few years off from blogging and the first thing I want to do when I get back is build a budget app. Look... I promise, it's more exciting than it sounds. We're going to get into a lot, so let's get started!
+</p>
+<p>
+    When I make a new project, I like to make something that'll excite me. We all have those projects that we start, and after `x` number of commits, we're bored and move on. Not the case here. I've spent the past two years working on a budget for my wife and I. It's nothing strict, but a collection of google spreadsheets that track the comings and goings of our money. The flow goes like this:
+</p>
+<ol>
+    <li>Make an annual budget mid to end December the year before using the annual budget spreadsheet. This is expected money spent on defined categories and excpected money in from various jobs</li>
+    <li>Keep track of spending per week using the Weekly_Template. This has three pages: Daily, Expenses, and Earnings. Daily shouldn't need anything done to it, it's all excell functions that calculate everything. The Expenses page is where I add any expenses for the week (dollar amount, account, category, and notes). The earnings are where any income goes. I also start the week off by putting last week's Account info (checking, CC, and pending) into the earnings sheet</li>
+    <li>Saturday mornings, I make a copy of the Weekly Spreadsheet with the date matching the "Week Ending" date in the Annual spreadsheet. I.e. On Saturday December 31st 2022 (HAPPY NEW YEAR) I'll copy over the Weekly Spreadsheet and call it "Jan 6th". This gets copied into a folder on google drive like this: `/budget/details/2023`</li>
+    <li>Also on Saturday mornings, I take everything from Column D rows 18-28 in the Daily sheet of the Weekly spreadsheet and copy the values into the approriate row in the Annual sheet. I.e. On Saturday January 7th 2023, I'll grab those values in the Weekly Template titled "Jan 6th" and copy it into Column B rows 9-19 of the Annual spreadsheet</li>
+</ol>
+<p>
+    Of course, there might be smaller things that happen (I.e. transfers to brokerage account, transfer to savings, IRA contributions, bonuses, etc.). But high level, it's pretty straight forward and all I really need to do is put amounts into the weekly spreadsheet and validate that the sum matches what's in our bank account. Also, that we aren't straying too far away from the end goal of saving money.
+</p>
+<p>
+    Ok, so, simple enough. But all of the copying/pasting/making new files has gotten so repetitive. I'm down to just keep track of spending, but this extra work sucks about 15 minutes to half an hour out of my weekend. There HAS to be a better way to do this, right? You are correct! All of my sheets are in google drive and google has a pretty straight forward way to CRUD them! I bet we could make an app that, when run, will copy all the values I need and create all the files I need. I don't think it'll be able to budget my life, but we gotta start somewhere.
+</p>
+<p>
+    But lets go one step farther and make this even better! Here's what I'm thinking so that by the time 2023 rolls around, we'll have something that works for me!
+</p>
+<ol>
+    <li>Build a node app to handle the weekly budget saturday transfers</li>
+    <li>Create an EC2 instance on AWS</li>
+    <li>Create Express App</li>
+    <li>Connect Node App to Express App</li>
+    <li>Deploy to EC2</li>
+</ol>
+<p>
+    Ok, that's pretty much it! This will span several blog posts and hopefully be informative. I'll be writing everything in TypeScript at <a href="https://github.com/hwalborn/walborn-budget">this repo here</a>. The spreadsheets are in there as well. Looking forward to it!
+</p>

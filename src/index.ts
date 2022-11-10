@@ -2,20 +2,19 @@ import { google, Auth } from 'googleapis';
 import { JSONClient } from 'google-auth-library/build/src/auth/googleauth';
 import { authorize } from './auth';
 import { SpreadsheetService } from './SpreadsheetService';
+import { ANNUAL_SPREADSHEET_ID } from '../spreadsheetIds';
 
 const makeDate = (date: Date) => {
     return date.toISOString().split('T')[0]
 }
 
 /**
- * Prints the names and majors of students in a sample spreadsheet:
- * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
- * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
+ * TODO -> this is how we find what the friday on annual, come back here
  */
 async function listMajors(auth: Auth.OAuth2Client | JSONClient) {
   const sheets = google.sheets({version: 'v4', auth});
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: '1iG3CDtl14CVftOX5eINp8MJ9pKdqqrubKfpEPzcGUpY',
+    spreadsheetId: ANNUAL_SPREADSHEET_ID,
     range: 'Working!B2:BA2',
   });
   const rows = res.data.values;

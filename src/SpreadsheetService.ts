@@ -150,14 +150,14 @@ export class SpreadsheetService extends GoogleService {
 
     async getWeeklyValues(): Promise<WeeklyRead | undefined> {
         try {
-            const sheets = google.sheets({version: 'v4', auth: this.auth});
-            const res = await sheets.spreadsheets.values.batchGet({
-                spreadsheetId: this.currentWeeklySpreadsheetId,
-                ranges:[DAILY_EXPENSES_RANGE, DAILY_BALANCES_RANGE, EARNINGS_RANGE]
-            });
-            const [expenses, balances, earnings] = res.data.valueRanges;
+            // const sheets = google.sheets({version: 'v4', auth: this.auth});
+            // const res = await sheets.spreadsheets.values.batchGet({
+            //     spreadsheetId: this.currentWeeklySpreadsheetId,
+            //     ranges:[DAILY_EXPENSES_RANGE, DAILY_BALANCES_RANGE, EARNINGS_RANGE]
+            // });
+            // const [expenses, balances, earnings] = res.data.valueRanges;
             // TODO -> just for testing
-            // const [expenses, balances, earnings] = await mockSheetsBatch();
+            const [expenses, balances, earnings] = await mockSheetsBatch();
             
             return {
                 balances: this.formatBalances(balances.values),

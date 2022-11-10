@@ -2,7 +2,42 @@
     Oh hey! We need to start working on the technical implementationt make this bad boy happen. I was thinking
     the best place to start would be to structure out our classes and start reading data. Once we have the data
     we can work on doing all the writing we need. Ok, enough introduction, lets talk about what I've worked on!
+    All of the changes specific to today's task are in 
+    <a href="https://github.com/hwalborn/walborn-budget/tree/implement-structure-and-read">this</a> branch on github.
 </p>
+<h3>File Structures</h3>
 <p>
-    
+    You'll notice that there are some new files. I've added some untracked files as well. Here's the untracked files/directories:
+    <ul>
+        <li>`./dist/` -> simple enough, our distribution build gets plopped here</li>
+        <li>`./node_modules/` -> again, pretty straight forward. No need to track dependencies.</li>
+        <li>`./credentials.json` -> this is a file we need to add ourselves. I'll point it out when we go through auth.</li>
+        <li>`./token.json` -> this gets created for us by our authentication</li>
+        <li>`./spreadsheetIds.ts` -> this has all of the Id's I've hardcoded for the time being</li>
+    </ul>
+    Other than that, you can step through and see what's going on. Let's walk through the files
+    <ul>
+        <li>`./src/index.ts` -> this is our entry point, it calls `auth.ts` and makes a new instance of `SpreadsheetService`</li>
+        <li>
+            `./src/auth.ts` -> this handles our google authentication. Auth was a <i>little</i> complicated. But I think that these two
+            quick start guides really helped a lot: <a href="https://developers.google.com/sheets/api/quickstart/nodejs">google sheets</a>, <a href="https://developers.google.com/drive/api/quickstart/nodejs">google drive</a>.
+            If you follow those, you'll notice that my implementation is very similar. I'll probably remove the whole writing token business by the end
+        </li>
+        <li>`./src/constants.ts` -> just all of our constants that we'll use</li>
+        <li>`./src/GoogleService.ts` -> this holds our auth and interacts with google drive</li>
+        <li>`./src/SpreadsheetService.ts` -> this one is a big one and we'll go in depth later</li>
+        <li>`./src/mocks.ts` -> I'm using this to limit my request to the google API</li>
+        <li>`./src/types.ts` -> type definitions</li>
+    </ul>
+    Pretty straight forward at this point. I don't anticipate our app growing too much, no need to really break things out further IMO.
+</p>
+<h3>Authentication</h3>
+<p>
+    I mentioned some about it above, but I figured it would be good to go into a little more detail. Following the guides above, you'll
+    see that you need to create a project and enable the proper API's (sheets and drive). I whitelisted only my IP address for now... I don't
+    think that anyone else will be trying to mess with my budget (they would have to log in to my google account anyway).
+</p>
+<h3>Reading Data</h3>
+<p>
+    This was a fun part. Once I had auth wired up, I 
 </p>

@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "npx ./src/index.ts",
     "build": "npx webpack",
     "start:dev": "npx nodemon ./src/index.ts"
   },

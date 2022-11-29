@@ -9,25 +9,25 @@
 <p>
     You'll notice that there are some new files. I've added some untracked files as well. Here's the untracked files/directories:
     <ul>
-        <li>`./dist/` -> simple enough, our distribution build gets plopped here</li>
-        <li>`./node_modules/` -> again, pretty straight forward. No need to track dependencies.</li>
-        <li>`./credentials.json` -> this is a file we need to add ourselves. I'll point it out when we go through auth.</li>
-        <li>`./token.json` -> this gets created for us by our authentication</li>
-        <li>`./spreadsheetIds.ts` -> this has all of the Id's I've hardcoded for the time being</li>
+        <li><code>./dist/</code> -> simple enough, our distribution build gets plopped here</li>
+        <li><code>./node_modules/</code> -> again, pretty straight forward. No need to track dependencies.</li>
+        <li><code>./credentials.json</code> -> this is a file we need to add ourselves. I'll point it out when we go through auth.</li>
+        <li><code>./token.json</code> -> this gets created for us by our authentication</li>
+        <li><code>./spreadsheetIds.ts</code> -> this has all of the Id's I've hardcoded for the time being</li>
     </ul>
     Other than that, you can step through and see what's going on. Let's walk through the files
     <ul>
-        <li>`./src/index.ts` -> this is our entry point, it calls `auth.ts` and makes a new instance of `SpreadsheetService`</li>
+        <li><code>./src/index.ts</code> -> this is our entry point, it calls <code>auth.ts</code> and makes a new instance of <code>SpreadsheetService</code></li>
         <li>
-            `./src/auth.ts` -> this handles our google authentication. Auth was a <i>little</i> complicated. But I think that these two
+            <code>./src/auth.ts</code> -> this handles our google authentication. Auth was a <i>little</i> complicated. But I think that these two
             quick start guides really helped a lot: <a href="https://developers.google.com/sheets/api/quickstart/nodejs">google sheets</a>, <a href="https://developers.google.com/drive/api/quickstart/nodejs">google drive</a>.
             If you follow those, you'll notice that my implementation is very similar. I'll probably remove the whole writing token business by the end
         </li>
-        <li>`./src/constants.ts` -> just all of our constants that we'll use</li>
-        <li>`./src/GoogleService.ts` -> this holds our auth and interacts with google drive</li>
-        <li>`./src/SpreadsheetService.ts` -> this one is a big one and we'll go in depth later</li>
-        <li>`./src/mocks.ts` -> I'm using this to limit my request to the google API</li>
-        <li>`./src/types.ts` -> type definitions</li>
+        <li><code>./src/constants.ts</code> -> just all of our constants that we'll use</li>
+        <li><code>./src/GoogleService.ts</code> -> this holds our auth and interacts with google drive</li>
+        <li><code>./src/SpreadsheetService.ts</code> -> this one is a big one and we'll go in depth later</li>
+        <li><code>./src/mocks.ts</code> -> I'm using this to limit my request to the google API</li>
+        <li><code>./src/types.ts</code> -> type definitions</li>
     </ul>
     Pretty straight forward at this point. I don't anticipate our app growing too much, no need to really break things out further IMO.
 </p>
@@ -39,5 +39,65 @@
 </p>
 <h3>Reading Data</h3>
 <p>
-    This was a fun part. Once I had auth wired up, I 
+    This was a fun part. Once I had auth wired up, I needed to read all the data from this week's budget spreadsheet. Let's start by taking a look
+    at the constructor for <code>SpreadsheetService.ts</code>.
+    <pre class="prettyprint">
+constructor(auth: Auth.OAuth2Client | JSONClient) {
+    super(auth);
+
+    // gotta know which Friday we are doing
+    const nextFriday = 5 - this.weekEndingDate.getDay();
+    this.weekEndingDate.setDate(this.weekEndingDate.getDate() + nextFriday);
+    this.targetDateTitle = this.getTargetTitle();
+    this.kickItOff();
+}
+    </pre>
+</p>
+
+<p>
+    In here, we check auth, then we find which friday we are targeting. Then we use set the weekending date to this date (i.e. if today is
+    Wendesday November 2nd, we would target Friday November 4th). We set the title (would be "Nov 04" in this case... The titles should be 
+    saved programmatically). And finally, we start our entry method by calling <code>this.kickItOff()</code>
+</p>
+
+<p>
+    The first thing the <code>kickItOff</code> method does is set the spreadsheet id. It does this by finding the spreadsheet with that title
+    in the correct directory in google drive. Then it grabs the spreadsheet id from there. We will use that to read data.
+</p>
+
+<p>
+    When we read the values from the spreadsheet, we get ranges. So those come back as multi dimensional arrays that we need to format.
+    We pass each array into a method that formats it so in the end we have something looking like this:
+    <pre class="prettyprint">
+{
+    balances: {
+        CK: 2259.69,
+        OSCHECK: -60,
+        SAV: 10000,
+        CASH: 100,
+        CC: -1000,
+        CCPEND: -25
+    },
+    expenses: {
+        RU: -2000,
+        GA: -301.56,
+        SHOP: -103.38,
+        RB: -163.16,
+        ENT: 0,
+        TRAV: -45.96,
+        TRANS: -8.25,
+        CELL: 0,
+        SL: 0,
+        MD: 0,
+        MISC: -103
+    },
+    income: { WORK: 2500 }
+}
+    </pre>
+    The formatting step looks complicated and is unique per type of range we are formatting.
+</p>
+
+<p>
+    And there we have it! We have read all the necessary (for now) data from our weekly spreadsheet. Lets move on and figure out how we can
+    use that data to write to our annual spreadsheet!
 </p>

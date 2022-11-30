@@ -1,11 +1,13 @@
-import { Auth, google } from 'googleapis';
+import { Auth, google, sheets_v4 } from 'googleapis';
 import { JSONClient } from 'google-auth-library/build/src/auth/googleauth';
 import { GoogleService } from "./GoogleService";
 
 import { 
     DAILY_EXPENSES_RANGE,
     DAILY_BALANCES_RANGE,
-    EARNINGS_RANGE } from "./constants";
+    EARNINGS_RANGE, 
+    ANNUAL_DATE_RANGE,
+    ANNUAL_SHEET} from "./constants";
 import { 
     AccountBalances,
     ExpenseBalances,
@@ -29,6 +31,7 @@ export class SpreadsheetService extends GoogleService {
     targetDateTitle: string;
     weekEndingDate: Date = new Date();
     weeklySpreadsheetTemplateId = WEEKLY_SPREADSHEET_ID;
+    service: sheets_v4.Sheets;
 
     // CTOR
     constructor(auth: Auth.OAuth2Client | JSONClient) {
@@ -37,7 +40,10 @@ export class SpreadsheetService extends GoogleService {
         // gotta know which Friday we are doing
         const nextFriday = 5 - this.weekEndingDate.getDay();
         this.weekEndingDate.setDate(this.weekEndingDate.getDate() + nextFriday);
+        this.weekEndingDate.setFullYear(this.weekEndingDate.getFullYear() + 1);
         this.targetDateTitle = this.getTargetTitle();
+        const service = google.sheets({version: 'v4', auth});
+        this.service = service;
         this.kickItOff();
     }
 
@@ -52,9 +58,9 @@ export class SpreadsheetService extends GoogleService {
 
     private async setWeeklySpreadSheetId(): Promise<void> {
         try {
-            // TODO -> hardcoding this for now, will come back and get it dynamically
             const spreadSheetId = await this.getFileId(this.targetDateTitle);
             this.currentWeeklySpreadsheetId = spreadSheetId;
+            // TESTING -> hardcoding this for now, will come back and get it dynamically
             // this.currentWeeklySpreadsheetId = CURRENT_WEEKLY_SPREADSHEET_ID;
         } catch (error) {
             throw error;
@@ -65,12 +71,13 @@ export class SpreadsheetService extends GoogleService {
         try {
             await this.setWeeklySpreadSheetId();
             const weeklyValues = await this.getWeeklyValues();
-            console.log('FINAL VALUES', weeklyValues);
+            await this.writeToAnnual(weeklyValues);
         } catch (error) {
             console.log(error);
         }
     }
 
+    // read helper functions
     // Google sheets uses accounting format, so negatives are (100) === -100
     private convertToNumber(val: string): number {
         if (val.trim() !== '-') {
@@ -88,7 +95,8 @@ export class SpreadsheetService extends GoogleService {
         const reducerFunc = (balances: ExpenseBalances, expense: string[]) => {
             const [amount, , key] = expense;
             if ((expenseTypes as ReadonlyArray<string>).includes(key)) {
-                balances[key as ExpenseKey] = this.convertToNumber(amount);
+                // amounts come in as negative, but we want to write them as positive in the annual
+                balances[key as ExpenseKey] = this.convertToNumber(amount) * -1;
             }
             return balances;
         }
@@ -143,6 +151,71 @@ export class SpreadsheetService extends GoogleService {
         return formatted;
     }
 
+    // write helper functions
+    private async findAnnualColumn(): Promise<number> {
+        try {
+            const res = await this.service.spreadsheets.values.get({
+              spreadsheetId: ANNUAL_SPREADSHEET_ID,
+              range: ANNUAL_DATE_RANGE,
+            });
+            const rows = res.data.values;
+            if (!rows || rows.length === 0) {
+              console.log('No data found.');
+              return;
+            }
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                for (let j = 0; j < row.length; j++) {
+                    const date = row[j];
+                    const budgetDay = new Date(date);
+                    if (this.makeDate(budgetDay) === this.makeDate(this.weekEndingDate)) {
+                        return j;
+                    }
+                }
+            }
+            throw new Error(`no column for ${this.weekEndingDate} found`);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    private getColumnName(index: number): string {
+        // I'm lifting this from here: https://stackoverflow.com/a/21231012
+        let temp, letter = '';
+        while (index > 0) {
+            temp = (index - 1) % 26;
+            letter = String.fromCharCode(temp + 65) + letter;
+            index = (index - temp - 1) / 26;
+        }
+        return letter;
+    }
+
+    private makeDate(date: Date): string {
+        return date.toISOString().split('T')[0]
+    }
+
+    private formatValues(values: WeeklyRead): number[][] {
+        const { income, expenses } = values;
+        const formattedValues = [[
+            income.WORK || 0,
+            income.OTHER || 0,
+            null,
+            null,
+            expenses.RU || 0,
+            expenses.GA || 0,
+            expenses.SHOP || 0,
+            expenses.RB || 0,
+            expenses.ENT || 0,
+            expenses.TRAV || 0,
+            expenses.TRANS || 0,
+            expenses.CELL || 0,
+            expenses.SL || 0,
+            expenses.MD || 0,
+            expenses.MISC || 0
+        ]]
+        return formattedValues;
+    }
+
     // Methods
     getFinalIncomeFromWeekly(): void {
         throw 'NOT IMPLEMENTED'
@@ -150,14 +223,13 @@ export class SpreadsheetService extends GoogleService {
 
     async getWeeklyValues(): Promise<WeeklyRead | undefined> {
         try {
-            // const sheets = google.sheets({version: 'v4', auth: this.auth});
-            // const res = await sheets.spreadsheets.values.batchGet({
-            //     spreadsheetId: this.currentWeeklySpreadsheetId,
-            //     ranges:[DAILY_EXPENSES_RANGE, DAILY_BALANCES_RANGE, EARNINGS_RANGE]
-            // });
-            // const [expenses, balances, earnings] = res.data.valueRanges;
+            const res = await this.service.spreadsheets.values.batchGet({
+                spreadsheetId: this.currentWeeklySpreadsheetId,
+                ranges:[DAILY_EXPENSES_RANGE, DAILY_BALANCES_RANGE, EARNINGS_RANGE]
+            });
+            const [expenses, balances, earnings] = res.data.valueRanges;
             // TODO -> just for testing
-            const [expenses, balances, earnings] = await mockSheetsBatch();
+            // const [expenses, balances, earnings] = await mockSheetsBatch();
             
             return {
                 balances: this.formatBalances(balances.values),
@@ -169,8 +241,24 @@ export class SpreadsheetService extends GoogleService {
         }
     }
 
-    writeToAnnual(): void {
-        throw 'NOT IMPLEMENTED';
+    async writeToAnnual(values: WeeklyRead): Promise<void> {
+        try {
+            const column = await this.findAnnualColumn();
+            const columnName = this.getColumnName(column + 2);
+            const range = `${ANNUAL_SHEET}${columnName}5:${columnName}19`
+            const body = {
+                majorDimension: 'COLUMNS',
+                values: this.formatValues(values)
+            }
+            await this.service.spreadsheets.values.update({
+              spreadsheetId: ANNUAL_SPREADSHEET_ID,
+              range: range,
+              requestBody: body,
+              valueInputOption: 'RAW'
+            });
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     copyWeekly(): void {

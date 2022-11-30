@@ -1,4 +1,5 @@
 var path = require('path');
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 
 module.exports = {
     mode: "development",
@@ -25,9 +26,7 @@ module.exports = {
             }
         ]
     },
-    devServer: {
-        contentBase: path.join(__dirname, 'dist'),
-        index: 'src/index.ts',
-        compress: true
-    },
+    plugins: [
+        new NodePolyfillPlugin()
+    ]
 }

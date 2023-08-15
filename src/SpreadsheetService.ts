@@ -7,7 +7,8 @@ import {
     DAILY_BALANCES_RANGE,
     EARNINGS_RANGE, 
     ANNUAL_DATE_RANGE,
-    ANNUAL_SHEET} from "./constants";
+    ANNUAL_SHEET,
+    DAILY_EXPENSES_RANGE_BUDGET} from "./constants";
 import { 
     AccountBalances,
     ExpenseBalances,
@@ -28,19 +29,21 @@ export class SpreadsheetService extends GoogleService {
     currentWeeklySpreadsheetId: string;
     income: IncomeAccounts | null;
     newWeeklySpreadsheetId: string | null;
+    nextWeekEndingDate: Date;
     targetDateTitle: string;
     weekEndingDate: Date = new Date();
     weeklySpreadsheetTemplateId = WEEKLY_SPREADSHEET_ID;
     service: sheets_v4.Sheets;
 
     // CTOR
-    constructor(auth: Auth.OAuth2Client | JSONClient) {
+    constructor(auth: Auth.OAuth2Client | Auth.Impersonated) {
         super(auth);
 
         // gotta know which Friday we are doing
         const nextFriday = 5 - this.weekEndingDate.getDay();
         this.weekEndingDate.setDate(this.weekEndingDate.getDate() + nextFriday);
-        this.weekEndingDate.setFullYear(this.weekEndingDate.getFullYear() + 1);
+        this.nextWeekEndingDate = new Date(this.weekEndingDate);
+        this.nextWeekEndingDate.setDate(this.weekEndingDate.getDate() + 7);
         this.targetDateTitle = this.getTargetTitle();
         const service = google.sheets({version: 'v4', auth});
         this.service = service;
@@ -48,12 +51,20 @@ export class SpreadsheetService extends GoogleService {
     }
 
     // Private methods
-    private getTargetTitle(): string {
-        const dateValues = this.weekEndingDate.toDateString().split(' ');
+    private formatDateTitle(date: Date): string {
+        const dateValues = date.toDateString().split(' ');
         if (dateValues.length >= 3) {
             return `${dateValues[1]} ${dateValues[2]}`;
         }
         return '';
+
+    }
+    private getTargetTitle(): string {
+        return this.formatDateTitle(this.weekEndingDate);
+    }
+
+    private getNewTitle(): string {
+        return this.formatDateTitle(this.nextWeekEndingDate);
     }
 
     private async setWeeklySpreadSheetId(): Promise<void> {
@@ -71,7 +82,10 @@ export class SpreadsheetService extends GoogleService {
         try {
             await this.setWeeklySpreadSheetId();
             const weeklyValues = await this.getWeeklyValues();
-            await this.writeToAnnual(weeklyValues);
+            // await this.writeToAnnual(weeklyValues);
+            await this.copyWeekly();
+            this.writeAnnualValuesToWeekly();
+            const huh = 123;
         } catch (error) {
             console.log(error);
         }
@@ -261,13 +275,45 @@ export class SpreadsheetService extends GoogleService {
         }
     }
 
-    copyWeekly(): void {
-        // will probably get a new ID back here and save as prop or return
-        throw 'NOT IMPLEMENTED';
+    async copyWeekly(): Promise<void> {
+        try {
+            // will probably get a new ID back here and save as prop or return
+            const newTitle = this.getNewTitle();
+            this.newWeeklySpreadsheetId = await this.copyFile(this.weeklySpreadsheetTemplateId, newTitle);
+        } catch (error) {
+            console.error(error)
+        }
     }
 
-    writeAnnualValuesToWeekly(): void {
-        throw 'NOT IMPLEMENTED';
+    async writeAnnualValuesToWeekly(): Promise<void> {
+        try {
+            if (!this.newWeeklySpreadsheetId) {
+                throw new Error('NEED TO MAKE NEW SPREADSHEET FIRST');
+            }
+            const column = await this.findAnnualColumn();
+            const columnName = this.getColumnName(column + 3);
+            const range = `${ANNUAL_SHEET}${columnName}9:${columnName}19`
+            const res = await this.service.spreadsheets.values.get({
+                spreadsheetId: this.annualSpreadsheetId,
+                range
+            });
+            if (!res.data) {
+                throw new Error(`NO DATA FROM ANNUAL SPREADSHEET FOR ${this.nextWeekEndingDate}`);
+            }
+            const body = {
+                values: res.data.values
+            }
+            await this.service.spreadsheets.values.update({
+              spreadsheetId: this.newWeeklySpreadsheetId,
+              range: DAILY_EXPENSES_RANGE_BUDGET,
+              requestBody: body,
+              valueInputOption: 'RAW'
+            });
+            // TODO -> just for testing
+            // const [expenses, balances, earnings] = await mockSheetsBatch();
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     writeStartingBalancesToWeekly(): void {

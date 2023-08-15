@@ -1,5 +1,5 @@
 import { google, Auth } from 'googleapis';
-import { JSONClient } from 'google-auth-library/build/src/auth/googleauth';
+// import { JSONClient, GoogleAuth } from 'google-auth-library/build/src/auth/googleauth';
 import { authorize } from './auth';
 import { SpreadsheetService } from './SpreadsheetService';
 import { ANNUAL_SPREADSHEET_ID } from '../spreadsheetIds';
@@ -11,7 +11,7 @@ const makeDate = (date: Date) => {
 /**
  * TODO -> this is how we find what the friday on annual, come back here
  */
-async function listMajors(auth: Auth.OAuth2Client | JSONClient) {
+async function listMajors(auth: Auth.OAuth2Client | Auth.GoogleAuth) {
   const sheets = google.sheets({version: 'v4', auth});
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: ANNUAL_SPREADSHEET_ID,

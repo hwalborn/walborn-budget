@@ -1,6 +1,8 @@
 
 import { google, Auth } from 'googleapis';
 import { CREDENTIALS_PATH, SCOPES, TOKEN_PATH } from './constants';
+import { JSONClient, GoogleAuth } from 'google-auth-library/build/src/auth/googleauth';
+import { Impersonated } from 'google-auth-library';
 import { authenticate } from '@google-cloud/local-auth';
 import * as fs from 'fs';
 
@@ -13,11 +15,11 @@ import * as fs from 'fs';
  *
  * @return {Promise<OAuth2Client|null>}
  */
- async function loadSavedCredentialsIfExist() {
+ async function loadSavedCredentialsIfExist(): Promise<Auth.Impersonated> {
     try {
       const content = await fs.promises.readFile(TOKEN_PATH);
       const credentials = JSON.parse(content.toString());
-      return google.auth.fromJSON(credentials);
+      return google.auth.fromJSON(credentials) as Exclude<Impersonated, Auth.GoogleAuth<JSONClient>>;
     } catch (err) {
       return null;
     }
@@ -48,7 +50,7 @@ import * as fs from 'fs';
    * Load or request or authorization to call APIs.
    *
    */
-  export async function authorize() {
+  export async function authorize(): Promise<Auth.Impersonated | Auth.OAuth2Client> {
     let client = await loadSavedCredentialsIfExist();
     if (client) {
       return client;
